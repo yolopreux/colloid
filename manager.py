@@ -6,6 +6,7 @@ from flask.ext.script import prompt_bool
 
 from app import app
 from app import db
+from app.models import *
 
 manager = Manager(app)
 
@@ -16,7 +17,7 @@ def dropdb():
 
 @manager.command
 def createdb():
-    db.drop_all()
+    db.create_all()
 
 if __name__ == '__main__':
     manager.run()
