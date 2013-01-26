@@ -10,3 +10,5 @@ Werkzeug==0.8.3
 argparse==1.2.1
 noise==1.0b3
 wsgiref==0.1.2
+Flask-restful>=0.0.0
+requests

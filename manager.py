@@ -7,6 +7,7 @@ from flask.ext.script import prompt_bool
 from app import app
 from app import db
 from app.models import *
+from app.recounts import CombatParser
 
 manager = Manager(app)
 
@@ -19,5 +20,11 @@ def dropdb():
 def createdb():
     db.create_all()
 
+@manager.option('-p', '--file', help='File path')
+def parse(file):
+    CombatParser().run(file)
+
 if __name__ == '__main__':
     manager.run()
+    
+
