@@ -12,7 +12,3 @@ class AdminView(BaseView):
     @expose('/')
     def index(self):
         return self.render('admin/index.html')
-
-#    @expose('/test/')
-#    def test(self):
-#        return self.render('admin/test.html')

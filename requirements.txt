@@ -10,7 +10,7 @@ SQLAlchemy==0.8.0b2
 WTForms==1.0.3
 Werkzeug==0.8.3
 argparse==1.2.1
-noise==1.0b3
+nose>=0.0.0
 pycrypto==2.6
 requests==1.1.0
 wsgiref==0.1.2
