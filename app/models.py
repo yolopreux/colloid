@@ -3,13 +3,17 @@ from app import BaseModel
 
 class CombatEvent(db.Model, BaseModel):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80))
+    name = db.Column(db.String(80), nullable=False)
 
 class Actor(db.Model, BaseModel):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80))
+    name = db.Column(db.String(80), nullable=False)
 
-class Ability(BaseModel):
+class Ability(db.Model, BaseModel):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80))
+    swotr_id = db.Column(db.String(80), unique=True)
+    name = db.Column(db.String(80), nullable=False)
 
+class Target(db.Model, BaseModel):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False)

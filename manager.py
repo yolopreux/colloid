@@ -18,6 +18,7 @@ def dropdb():
 
 @manager.command
 def createdb():
+    dropdb()
     db.create_all()
 
 @manager.option('-p', '--file', help='File path')
@@ -26,5 +27,5 @@ def parse(file):
 
 if __name__ == '__main__':
     manager.run()
-    
+
 
