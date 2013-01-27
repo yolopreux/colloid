@@ -31,14 +31,15 @@ class ActorModelView(AppModelView):
     # Disable model creation
     can_create = False
 
-    column_list = ('name',)
+    column_list = ('name', 'is_npc',)
     column_searchable_list = ('name',)
-    column_sortable_list = ('name',)
-    column_filters = ('name',)
+    column_sortable_list = ('name', 'is_npc',)
+    column_filters = ('name', 'is_npc',)
 
     def __init__(self, **kwargs):
         from app.models import Actor
         super(ActorModelView, self).__init__(Actor, **kwargs)
+
 
 class AbilityModelView(AppModelView):
     """Actor admin model view"""
@@ -53,4 +54,16 @@ class AbilityModelView(AppModelView):
     def __init__(self, **kwargs):
         from app.models import Ability
         super(AbilityModelView, self).__init__(Ability, **kwargs)
+
+
+class CombatEventModelView(AppModelView):
+    """Actor admin model view"""
+    # Disable model creation
+    can_create = False
+    column_filters = ('created_at',)
+
+    def __init__(self, **kwargs):
+        from app.models import CombatEvent, Ability
+        self.column_searchable_list = (Ability.name,)
+        super(CombatEventModelView, self).__init__(CombatEvent, **kwargs)
 

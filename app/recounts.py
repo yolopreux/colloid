@@ -33,6 +33,12 @@ class CombatParser(object):
 
             return ability
         except AttributeError, err:
+            if re.match(r'\w+', logdata):
+                ability = Ability.query.filter_by(swotr_id=logdata.lower()).first()
+                if not ability:
+                    ability = Ability(name=logdata, swotr_id=logdata.lower()).save()
+                return ability
+
             raise InvalidDataError(logdata, 'ability not match', self.ability_pattern, err)
 
     def created_at(self, logdata):

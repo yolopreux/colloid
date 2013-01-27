@@ -16,3 +16,4 @@ class AppAdmin(Admin):
     def init_views(self):
         self.add_view(models.ActorModelView(category="Combat"))
         self.add_view(models.AbilityModelView(category="Combat"))
+        self.add_view(models.CombatEventModelView(category="Combat"))
