@@ -32,6 +32,9 @@ class BaseModel(Model):
     def __rep__(self):
         return u'<%s:%s>' % (self.__class__, self.id)
 
+    def __str__(self):
+        return u'<%s:%s>' % (self.__class__, self.id)
+
 
 class CombatEvent(Resource):
     """Api resource for combat event"""

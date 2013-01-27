@@ -1,3 +1,5 @@
+import re
+
 from app import db
 from app import BaseModel
 
@@ -13,6 +15,26 @@ class Actor(db.Model, BaseModel):
     def __unicode__(self):
         return u'%s' % self.name
 
+    def __init__(self, *args, **kwargs):
+        data = None
+        if 'data' in kwargs:
+            try:
+                match = re.match(r"(?P<name>[@|\w+|\s]{1,})", kwargs['data'])
+                self.name = match.groupdict()['name'].strip()
+                if '@' not in kwargs['data']:
+                    self.is_npc = True
+            except AttributeError, err:
+                print err
+#            data = re.findall(r"@([\w+]{1,})", kwargs['data'])
+            del kwargs['data']
+        super(Actor, self).__init__(*args, **kwargs)
+
+    def __rep__(self):
+        return u'<%s:%s:%s>' % (self.__class__, self.id, self.name)
+
+    def __str__(self):
+        return u'<%s:%s:%s>' % (self.__class__, self.id, self.name)
+
 
 class Ability(db.Model, BaseModel):
 
@@ -24,6 +46,12 @@ class Ability(db.Model, BaseModel):
 
     def __unicode__(self):
         return u'%s' % self.name
+
+    def __rep__(self):
+        return u'<%s:%s:%s>' % (self.__class__, self.id, self.name)
+
+    def __str__(self):
+        return u'<%s:%s:%s>' % (self.__class__, self.id, self.name)
 
 
 class Target(db.Model, BaseModel):
@@ -55,3 +83,10 @@ class CombatEvent(db.Model, BaseModel):
 
     def __unicode__(self):
         return u'%s' % self.name
+
+    def __rep__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return u'<%s, Time:%s, Actor:%s, Target:%s, Ability:%s>' % (self.__class__, \
+            self.created_at, self.actor, self.target, self.ability)
