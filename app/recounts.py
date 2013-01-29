@@ -4,6 +4,7 @@ import sys
 from datetime import datetime, time
 
 from app.models import Actor, Ability, CombatEvent
+from app.models import get_or_create
 
 class InvalidDataError(Exception):
     pass
@@ -12,15 +13,14 @@ class InvalidDataError(Exception):
 class CombatParser(object):
 
 
-    ability_pattern = r"(?P<name>[a-zA-Z\s^/{^/}]{1,}) {(?P<swotr_id>[\d+]{1,})}"
+    ability_pattern = r"(?P<name>[a-zA-Z\s^/{^/}]{0,}) {(?P<swotr_id>[\d+]{1,})}"
 
     def actor(self, logdata):
 
         name = re.match(r"(?P<name>[@|\w+|\s]{1,})", logdata).groupdict()['name']
-        actor = Actor.query.filter_by(name=name).first()
-        if not actor:
-            actor = Actor(data=name).save()
-
+        actor = get_or_create(Actor, name=name.strip())
+        if '@' not in actor.name:
+            actor.is_npc = True
         return actor
 
     def ability(self, logdata):

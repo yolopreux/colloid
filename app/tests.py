@@ -47,10 +47,21 @@ class RecountTestCase(DbTestCase):
                   '[23:03:14.159] [@Jalo] [Thrashing Larva {2960649806151680}:1566004468297] [Deathmark {808428809224192}] [RemoveEffect {836045448945478}: Deathmark {808428809224449}] ()',
                   '[23:03:15.382] [@Jalo] [@Jalo] [Duplicity {949110463004672}] [RemoveEffect {836045448945478}: Exploit Weakness {949110463004928}] ()',
                   '[23:03:15.386] [@Jalo] [@Jalo] [Discharge {808235535695872}] [Event {836045448945472}: AbilityActivate {836045448945479}] ()',
-                  '[23:03:15.386] [@Jalo] [@Jalo] [] [Spend {836045448945473}: Force {836045448938502}] (20)', ]
+                  '[23:03:15.386] [@Jalo] [@Jalo] [] [Spend {836045448945473}: Force {836045448938502}] (20)',
+                  '[23:03:41.737] [@Jalo] [Thrashing Larva {2960649806151680}:1566004468297] [ {3009045497643008}] [Event {836045448945472}: ModifyThreat {836045448945483}] () <50000>',
+                  '[23:03:41.949] [@Morgaina] [@Jalo] [Predation {2516812180750336}] [ApplyEffect {836045448945477}: Predation {2516812180750336}] ()',
+                  '[23:03:42.717] [@Yarpean] [@Jalo] [Revivification {808703687131136}] [ApplyEffect {836045448945477}: Heal {836045448945500}] (493)',
+                  '[23:03:42.792] [@Jalo] [@Jalo] [Crushing Darkness {863460225187840}] [Event {836045448945472}: AbilityActivate {836045448945479}] ()',
+                  '[23:03:43.712] [@Yarpean] [@Jalo] [Revivification {808703687131136}] [ApplyEffect {836045448945477}: Heal {836045448945500}] (859*)',
+                  '[23:03:43.942] [@Jalo] [@Jalo] [Duplicity {949110463004672}] [RemoveEffect {836045448945478}: Exploit Weakness {949110463004928}] ()', ]
 
     def parse_log_test(self):
         for combat in self.combat_log:
             CombatParser().parse(combat)
-        self.fail()
+        self.assertIsNotNone(Actor.query.filter_by(name='@Jalo').first())
+        self.assertIsNotNone(Actor.query.filter_by(name='@Yarpean').first())
+        self.assertIsNotNone(Actor.query.filter_by(name='@Morgaina').first())
+        target = Actor.query.filter_by(name='Retching Larva').first()
+        self.assertIsNotNone(target, 'Target')
+        self.assertTrue(target.is_npc, 'Target is npc')
 

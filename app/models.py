@@ -4,6 +4,14 @@ from app import db
 from app import BaseModel
 
 
+def get_or_create(model, **kwargs):
+    instance = model.db.session.query(model).filter_by(**kwargs).first()
+    if instance:
+        return instance
+    instance = model(**kwargs)
+    return instance
+
+
 class Actor(db.Model, BaseModel):
 
     __tablename__ = 'colloid_actors'
@@ -11,6 +19,7 @@ class Actor(db.Model, BaseModel):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
     is_npc = db.Column(db.Boolean)
+    swotr_id = db.Column(db.String(80), unique=True)
 
     def __unicode__(self):
         return u'%s' % self.name
