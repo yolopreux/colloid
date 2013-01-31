@@ -38,7 +38,7 @@ class Actor(db.Model, BaseModel):
             del kwargs['data']
         super(Actor, self).__init__(*args, **kwargs)
 
-    def __rep__(self):
+    def __repr__(self):
         return u'<%s:%s:%s>' % (self.__class__, self.id, self.name)
 
     def __str__(self):
@@ -56,7 +56,7 @@ class Ability(db.Model, BaseModel):
     def __unicode__(self):
         return u'%s' % self.name
 
-    def __rep__(self):
+    def __repr__(self):
         return u'<%s:%s:%s>' % (self.__class__, self.id, self.name)
 
     def __str__(self):
@@ -73,6 +73,13 @@ class Target(db.Model, BaseModel):
     def __unicode__(self):
         return u'%s' % self.name
 
+
+event_fights = db.Table('colloid_event_fights', db.Model.metadata,
+    db.Column('fight_id', db.Integer, db.ForeignKey('colloid_fights.id',
+        onupdate="cascade", ondelete='cascade'), primary_key=True),
+    db.Column('combat_event_id', db.Integer, db.ForeignKey('colloid_combat_events.id',
+        onupdate="cascade", ondelete='cascade'), primary_key=True)
+)
 
 class CombatEvent(db.Model, BaseModel):
 
@@ -93,9 +100,39 @@ class CombatEvent(db.Model, BaseModel):
     def __unicode__(self):
         return u'%s' % self.name
 
-    def __rep__(self):
+    def __repr__(self):
         return self.__str__()
 
     def __str__(self):
         return u'<%s, Time:%s, Actor:%s, Target:%s, Ability:%s>' % (self.__class__, \
             self.created_at, self.actor, self.target, self.ability)
+
+
+class Guild(db.Model, BaseModel):
+
+    __tablename__ = 'colloid_guilds'
+
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime)
+    name = db.Column(db.String(80), nullable=False)
+    contact_username = db.Column(db.String(80), nullable=False)
+
+    def __unicode__(self):
+        return u'%s' % self.name
+
+
+class Fight(db.Model, BaseModel):
+
+    __tablename__ = 'colloid_fights'
+
+    id = db.Column(db.Integer, primary_key=True)
+    start_at = db.Column(db.DateTime)
+    finish_at = db.Column(db.DateTime)
+    combat_events = db.relationship('CombatEvent', secondary=event_fights,
+        backref=db.backref('fights', lazy='dynamic'))
+
+    def __str__(self):
+        return u'<combat_events:%s>' % self.combat_events
+
+    def __repr__(self):
+        return u'<instance:%s:%s>' % (super(Fight, self).__repr__(), self.__str__())

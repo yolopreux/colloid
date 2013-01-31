@@ -5,7 +5,8 @@ import tempfile
 from app import app
 from app.models import Actor
 from app.recounts import CombatParser
-from app.models import CombatEvent
+from app.models import CombatEvent, Fight
+
 
 
 class DbTestCase(unittest.TestCase):

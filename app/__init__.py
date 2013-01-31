@@ -29,8 +29,8 @@ class BaseModel(Model):
 
         return self
 
-    def __rep__(self):
-        return u'<%s:%s>' % (self.__class__, self.id)
+    def __repr__(self):
+        return u'<%s:id:%s>' % (super(BaseModel, self).__repr__(), self.id)
 
     def __str__(self):
         return u'<%s:%s>' % (self.__class__, self.id)

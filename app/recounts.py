@@ -5,6 +5,7 @@ from datetime import datetime, time
 
 from app.models import Actor, Ability, CombatEvent
 from app.models import get_or_create
+from app.models import Fight
 
 class InvalidDataError(Exception):
     pass
@@ -60,7 +61,10 @@ class CombatParser(object):
     def parse(self, line):
         data = re.findall(r'[\[<\(]([^\[<\(\]>\)]*)[\]>\)]', line)
         if data[3]:
-            CombatEvent(actor=self.actor(data[1]), target=self.actor(data[2]), \
-                        ability=self.ability(data[3]), created_at=self.created_at(data[0])).save()
+            combat_event = CombatEvent(actor=self.actor(data[1]), target=self.actor(data[2]), \
+                        ability=self.ability(data[3]), created_at=self.created_at(data[0]))
+            fight = Fight()
+            fight.combat_events.append(combat_event)
+            fight.save()
 
 
