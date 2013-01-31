@@ -33,7 +33,7 @@ class BaseModel(Model):
         return u'<%s:id:%s>' % (super(BaseModel, self).__repr__(), self.id)
 
     def __str__(self):
-        return u'<%s:%s>' % (self.__class__, self.id)
+        return u'<%s:id:%s>' % (super(BaseModel, self).__repr__(), self.id)
 
 
 class CombatEvent(Resource):

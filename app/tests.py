@@ -3,7 +3,7 @@ import os
 import tempfile
 
 from app import app
-from app.models import Actor
+from app.models import Actor, Effect
 from app.recounts import CombatParser
 from app.models import CombatEvent, Fight
 

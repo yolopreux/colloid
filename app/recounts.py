@@ -6,6 +6,7 @@ from datetime import datetime, time
 from app.models import Actor, Ability, CombatEvent
 from app.models import get_or_create
 from app.models import Fight
+from app.models import Effect, EffectAction
 
 class InvalidDataError(Exception):
     pass
@@ -15,6 +16,7 @@ class CombatParser(object):
 
 
     ability_pattern = r"(?P<name>[a-zA-Z\s^/{^/}]{0,}) {(?P<swotr_id>[\d+]{1,})}"
+    efect_pattern = r"(?P<action>[a-zA-Z'\s^/{^/}]{0,}) {(?P<action_swotr_id>[\d+]{1,})}: (?P<name>[a-zA-Z\s^/{^/}]{0,}) {(?P<name_swotr_id>[\d+]{1,})}"
 
     def actor(self, logdata):
 
@@ -56,15 +58,36 @@ class CombatParser(object):
             return
 
         for line in file.readlines():
-            self.parse(line)
+            try:
+                self.parse(line)
+            except Exception, err:
+                print err
+
+    def effect(self, logdata):
+        try:
+            match = re.match(self.efect_pattern, logdata)
+            group = match.groupdict()
+
+            effect = get_or_create(Effect, name=group['name'], swotr_id=group['name_swotr_id'])
+            effect_action = get_or_create(EffectAction, name=group['action'], swotr_id=group['action_swotr_id'])
+
+            return effect_action, effect
+        except AttributeError, err:
+            raise InvalidDataError(logdata, 'effect not match', self.efect_pattern, err)
 
     def parse(self, line):
         data = re.findall(r'[\[<\(]([^\[<\(\]>\)]*)[\]>\)]', line)
+        self.effect(data[4])
         if data[3]:
             combat_event = CombatEvent(actor=self.actor(data[1]), target=self.actor(data[2]), \
-                        ability=self.ability(data[3]), created_at=self.created_at(data[0]))
+                        ability=self.ability(data[3]), created_at=self.created_at(data[0]), \
+                        effect_action=self.effect(data[4])[0], effect=self.effect(data[4])[1])
+            combat_event.save()
+            if self.effect(data[4])[0].name == 'EnterCombat':
+                Fight.reset()
             fight = Fight()
             fight.combat_events.append(combat_event)
-            fight.save()
-
+            if self.effect(data[4])[0].name == 'ExitCombat':
+                Fight.save()
+                Fight.reset()
 

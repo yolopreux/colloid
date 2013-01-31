@@ -5,7 +5,7 @@ from app import BaseModel
 
 
 def get_or_create(model, **kwargs):
-    instance = model.db.session.query(model).filter_by(**kwargs).first()
+    instance = model.query.filter_by(**kwargs).first()
     if instance:
         return instance
     instance = model(**kwargs)
@@ -88,14 +88,20 @@ class CombatEvent(db.Model, BaseModel):
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime)
     actor_id = db.Column(db.Integer, db.ForeignKey('colloid_actors.id'), nullable=False)
-    actor = db.relationship("Actor", backref=db.backref('actors'),
-        primaryjoin='CombatEvent.actor_id==Actor.id', uselist=False, single_parent=True)
+    actor = db.relationship("Actor", backref=db.backref('actor_events'),
+        primaryjoin='CombatEvent.actor_id==Actor.id', uselist=False, single_parent=False)
     target_id = db.Column(db.Integer, db.ForeignKey('colloid_actors.id'), nullable=False)
-    target = db.relationship("Actor", backref=db.backref('targets'),
-        primaryjoin='CombatEvent.target_id==Actor.id', uselist=False, single_parent=True)
+    target = db.relationship("Actor", backref=db.backref('target_events'),
+        primaryjoin='CombatEvent.target_id==Actor.id', uselist=False, single_parent=False)
     ability_id = db.Column(db.Integer, db.ForeignKey('colloid_abilities.id'), nullable=False)
-    ability = db.relationship("Ability", backref=db.backref('abilities'),
-        primaryjoin='CombatEvent.ability_id==Ability.id', uselist=False, single_parent=True)
+    ability = db.relationship("Ability", backref=db.backref('abilitiy_events'),
+        primaryjoin='CombatEvent.ability_id==Ability.id', uselist=False, single_parent=False)
+    effect_action_id = db.Column(db.Integer, db.ForeignKey('colloid_effect_actions.id'), nullable=False)
+    effect_action = db.relationship("EffectAction", backref=db.backref('effect_action_events'),
+        primaryjoin='CombatEvent.effect_action_id==EffectAction.id', uselist=False, single_parent=False)
+    effect_id = db.Column(db.Integer, db.ForeignKey('colloid_effects.id'), nullable=False)
+    effect = db.relationship("Effect", backref=db.backref('effect_events'),
+        primaryjoin='CombatEvent.effect_id==Effect.id', uselist=False, single_parent=False)
 
     def __unicode__(self):
         return u'%s' % self.name
@@ -121,9 +127,39 @@ class Guild(db.Model, BaseModel):
         return u'%s' % self.name
 
 
+class Effect(db.Model, BaseModel):
+
+    __tablename__ = 'colloid_effects'
+
+    id = db.Column(db.Integer, primary_key=True)
+    swotr_id = db.Column(db.String(80), unique=True)
+    name = db.Column(db.String(80), nullable=False)
+
+    def __unicode__(self):
+        return u'%s' % self.name
+
+
+class EffectAction(db.Model, BaseModel):
+
+    __tablename__ = 'colloid_effect_actions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    swotr_id = db.Column(db.String(80), unique=True)
+    name = db.Column(db.String(80), nullable=False)
+
+    def __unicode__(self):
+        return u'%s' % self.name
+
+
 class Fight(db.Model, BaseModel):
 
+    _instance = None
     __tablename__ = 'colloid_fights'
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(Fight, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
 
     id = db.Column(db.Integer, primary_key=True)
     start_at = db.Column(db.DateTime)
@@ -136,3 +172,7 @@ class Fight(db.Model, BaseModel):
 
     def __repr__(self):
         return u'<instance:%s:%s>' % (super(Fight, self).__repr__(), self.__str__())
+
+    @classmethod
+    def reset(cls):
+        cls._instance = None

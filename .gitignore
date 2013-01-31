@@ -39,3 +39,4 @@ venv
 *.db
 .settings
 configs/local_configs.py
+combat*
