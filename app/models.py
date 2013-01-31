@@ -1,14 +1,51 @@
+
 import re
 
 from app import db
 from app import BaseModel
 
 
+def slugify(str):
+    str = str.lower()
+    return re.sub(r'\W+', '_', str)
+
+
+class Recount(object):
+
+    _instance = None
+    _data = {}
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(Recount, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
+
+    def set(self, key, data):
+        self._data[key] = data
+
+    def get(self, key):
+        try:
+            return self._data[key]
+        except:
+            return None
+
+
 def get_or_create(model, **kwargs):
+    recount_key = slugify(str(model))
+    for key, value in kwargs.iteritems():
+        recount_key += slugify(key) + '__' + slugify(value)
+
+    result = Recount().get(recount_key)
+    if result:
+        return result
     instance = model.query.filter_by(**kwargs).first()
+
     if instance:
-        return instance
+        Recount().set(recount_key, instance)
+        return Recount().get(recount_key)
+
     instance = model(**kwargs)
+
     return instance
 
 
@@ -173,6 +210,5 @@ class Fight(db.Model, BaseModel):
     def __repr__(self):
         return u'<instance:%s:%s>' % (super(Fight, self).__repr__(), self.__str__())
 
-    @classmethod
-    def reset(cls):
-        cls._instance = None
+    def reset(self):
+        self._instance = None

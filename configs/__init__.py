@@ -18,6 +18,8 @@ THREADS_PER_PAGE = 16
 CSRF_ENABLED = True
 CSRF_SESSION_KEY = "123456"
 
+CACHE_TYPE = 'simple'
+
 try:
     from local_configs import *
 except ImportError:

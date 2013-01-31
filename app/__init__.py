@@ -4,16 +4,17 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.sqlalchemy import Model
 from flask.ext.admin.base import BaseView, expose
 from flask.ext.restful import Resource, Api
+from flask.ext.cache import Cache
 
 from app.admin import init_admin
-
 
 app = Flask(__name__)
 app.config.from_object('configs')
 
 db = SQLAlchemy(app)
 api = Api(app)
-
+cache = Cache()
+cache.init_app(app, config={'CACHE_TYPE': 'simple'})
 
 class BaseModel(Model):
     """Base class for models"""

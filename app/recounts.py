@@ -8,6 +8,7 @@ from app.models import get_or_create
 from app.models import Fight
 from app.models import Effect, EffectAction
 
+
 class InvalidDataError(Exception):
     pass
 
@@ -77,17 +78,20 @@ class CombatParser(object):
 
     def parse(self, line):
         data = re.findall(r'[\[<\(]([^\[<\(\]>\)]*)[\]>\)]', line)
-        self.effect(data[4])
+
         if data[3]:
             combat_event = CombatEvent(actor=self.actor(data[1]), target=self.actor(data[2]), \
                         ability=self.ability(data[3]), created_at=self.created_at(data[0]), \
                         effect_action=self.effect(data[4])[0], effect=self.effect(data[4])[1])
-            combat_event.save()
-            if self.effect(data[4])[0].name == 'EnterCombat':
-                Fight.reset()
             fight = Fight()
             fight.combat_events.append(combat_event)
-            if self.effect(data[4])[0].name == 'ExitCombat':
-                Fight.save()
-                Fight.reset()
+            combat_event.save()
+        if 'EnterCombat' in self.effect(data[4])[1].name:
+            Fight().reset()
+            print 'start combat: %s' % self.created_at(data[0])
+
+        if 'ExitCombat' in self.effect(data[4])[1].name:
+            Fight().save()
+            print 'exit combat: %s' % self.created_at(data[0])
+            Fight().reset()
 
