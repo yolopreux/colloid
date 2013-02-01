@@ -43,10 +43,9 @@ def get_or_create(model, **kwargs):
     if instance:
         Recount().set(recount_key, instance)
         return Recount().get(recount_key)
-
     instance = model(**kwargs)
 
-    return instance
+    return instance.save()
 
 
 class Actor(db.Model, BaseModel):
@@ -188,15 +187,32 @@ class EffectAction(db.Model, BaseModel):
         return u'%s' % self.name
 
 
-class Fight(db.Model, BaseModel):
+class CombatFight(object):
 
     _instance = None
-    __tablename__ = 'colloid_fights'
+    start_at = None
+    finish_at = None
+    combat_events = []
+    class_fight = None
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
-            cls._instance = super(Fight, cls).__new__(cls, *args, **kwargs)
+            cls._instance = super(CombatFight, cls).__new__(cls, *args, **kwargs)
         return cls._instance
+
+    @classmethod
+    def set_fight_class(cls, fight_class):
+        cls.class_fight = fight_class
+
+    def save(self):
+        fight = self.class_fight(start_at=self.start_at, finish_at=self.finish_at, combat_events=self.combat_events)
+        fight.save()
+
+class Fight(db.Model, BaseModel):
+
+    __tablename__ = 'colloid_fights'
+    _in_combat = None
+    _combat_fight = CombatFight
 
     id = db.Column(db.Integer, primary_key=True)
     start_at = db.Column(db.DateTime)
@@ -204,11 +220,16 @@ class Fight(db.Model, BaseModel):
     combat_events = db.relationship('CombatEvent', secondary=event_fights,
         backref=db.backref('fights', lazy='dynamic'))
 
-    def __str__(self):
-        return u'<combat_events:%s>' % self.combat_events
+#    def __str__(self):
+#        return u'<combat_events:%s>' % self.combat_events
 
-    def __repr__(self):
-        return u'<instance:%s:%s>' % (super(Fight, self).__repr__(), self.__str__())
+#    def __repr__(self):
+#        return u'<instance:%s:%s>' % (super(Fight, self).__repr__(), self.__str__())
 
-    def reset(self):
-        self._instance = None
+    @classmethod
+    def reset(cls):
+        cls._combat_fight._instance = None
+        cls._combat_fight.combat_events = []
+
+
+CombatFight.set_fight_class(Fight)

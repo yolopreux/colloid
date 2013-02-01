@@ -72,8 +72,10 @@ class RecountTestCase(DbTestCase):
         '[20:02:48.686] [@Jalo] [Operations Training Target MK-5 {2816265890562048}:1179000006870] [Shocked {808252715565342}] [ApplyEffect {836045448945477}: Damage {836045448945501}] (406 energy {836045448940874}) <406>',
         '[20:02:49.167] [@Jalo] [@Jalo] [Death Field {808433104191488}] [Event {836045448945472}: AbilityActivate {836045448945479}] ()',
         '[20:02:49.167] [@Jalo] [@Jalo] [] [Spend {836045448945473}: Force {836045448938502}] (25)',
+        '[20:02:49.165] [@Jalo] [@Jalo] [] [Event {836045448945472}: ExitCombat {836045448945490}] ()'
         '[20:02:49.169] [@Jalo] [@Jalo] [Death Field {808433104191488}] [ApplyEffect {836045448945477}: Heal {836045448945500}] (354)',
         '[20:02:49.170] [@Jalo] [@Jalo] [Exploitive Strikes {808441694126080}] [ApplyEffect {836045448945477}: Exploitive Strikes {808441694126080}] ()',
+        '[20:02:49.170] [@Jalo] [@Jalo] [] [Event {836045448945472}: EnterCombat {836045448945489}] ()',
         '[20:02:49.170] [@Jalo] [Operations Training Target MK-5 {2816265890562048}:1179000006870] [Deathmark {808428809224192}] [ApplyEffect {836045448945477}: Deathmark {808428809224449}] ()',
         '[20:02:49.171] [@Jalo] [Operations Training Target MK-5 {2816265890562048}:1179000006870] [Death Field {808433104191488}] [ApplyEffect {836045448945477}: Damage {836045448945501}] (2839* internal {836045448940876}) <2839>',
         '[20:02:54.766] [@Jalo] [@Jalo] [] [Event {836045448945472}: ExitCombat {836045448945490}] ()', ]
@@ -88,3 +90,12 @@ class RecountTestCase(DbTestCase):
         target = Actor.query.filter_by(name='Retching Larva').first()
         self.assertIsNotNone(target, 'Target')
         self.assertTrue(target.is_npc, 'Target is npc')
+
+        self.assertEqual(2, len(Fight.query.all()))
+        fights = Fight.query.all()
+        self.assertEqual(10, len(fights[0].combat_events))
+        self.assertEqual(fights[0].start_at.second, 45)
+        self.assertEqual(fights[0].finish_at.second, 49)
+        self.assertEqual(2, len(fights[1].combat_events))
+        self.assertEqual(fights[1].start_at.second, 49)
+        self.assertEqual(fights[1].finish_at.second, 54)

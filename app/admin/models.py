@@ -67,3 +67,4 @@ class CombatEventModelView(AppModelView):
         self.column_searchable_list = (Ability.name,)
         super(CombatEventModelView, self).__init__(CombatEvent, **kwargs)
 
+

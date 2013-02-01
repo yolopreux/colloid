@@ -17,7 +17,7 @@ class CombatParser(object):
 
 
     ability_pattern = r"(?P<name>[a-zA-Z\s^/{^/}]{0,}) {(?P<swotr_id>[\d+]{1,})}"
-    efect_pattern = r"(?P<action>[a-zA-Z'\s^/{^/}]{0,}) {(?P<action_swotr_id>[\d+]{1,})}: (?P<name>[a-zA-Z\s^/{^/}]{0,}) {(?P<name_swotr_id>[\d+]{1,})}"
+    efect_pattern = r"(?P<action>[a-zA-Z'\s^/{^/}]{0,}) {(?P<action_swotr_id>[\d+]{1,})}: (?P<name>[a-zA-Z'\s^/{^/}]{0,}) {(?P<name_swotr_id>[\d+]{1,})}"
 
     def actor(self, logdata):
 
@@ -79,19 +79,21 @@ class CombatParser(object):
     def parse(self, line):
         data = re.findall(r'[\[<\(]([^\[<\(\]>\)]*)[\]>\)]', line)
 
+        if 'EnterCombat' in self.effect(data[4])[1].name:
+            Fight.reset()
+            Fight._combat_fight().start_at = self.created_at(data[0])
+            print 'enter combat: %s' % self.created_at(data[0])
+
         if data[3]:
             combat_event = CombatEvent(actor=self.actor(data[1]), target=self.actor(data[2]), \
                         ability=self.ability(data[3]), created_at=self.created_at(data[0]), \
                         effect_action=self.effect(data[4])[0], effect=self.effect(data[4])[1])
-            fight = Fight()
-            fight.combat_events.append(combat_event)
-            combat_event.save()
-        if 'EnterCombat' in self.effect(data[4])[1].name:
-            Fight().reset()
-            print 'start combat: %s' % self.created_at(data[0])
+
+            Fight._combat_fight().combat_events.append(combat_event)
+#            combat_event.save()
 
         if 'ExitCombat' in self.effect(data[4])[1].name:
-            Fight().save()
+            Fight._combat_fight().finish_at = self.created_at(data[0])
+            Fight._combat_fight().save()
             print 'exit combat: %s' % self.created_at(data[0])
-            Fight().reset()
-
+            Fight.reset()
