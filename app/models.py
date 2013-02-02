@@ -197,7 +197,7 @@ class CombatFight(object):
 
     def save(self):
         fight = self.class_fight(start_at=self.start_at, finish_at=self.finish_at, combat_events=self.combat_events)
-        fight.save()
+        return fight.save()
 
 
 class Fight(db.Model, BaseModel):

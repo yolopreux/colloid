@@ -2,6 +2,7 @@ import os
 import re
 import weakref
 from datetime import datetime, time
+from datetime import timedelta
 
 from app import models
 from app import app
@@ -149,7 +150,7 @@ class CombatParser(object):
         if 'EnterCombat' in self.effect(data[4])[1].name:
             models.Fight.reset()
             models.Fight._combat_fight().start_at = self.created_at(data[0])
-            print 'enter combat: %s' % self.created_at(data[0])
+            app.logger.info('Enter combat: %s', self.created_at(data[0]))
 
         if data[3]:
             combat_event = models.CombatEvent(actor=self.actor(data[1]), target=self.actor(data[2]), \
@@ -161,6 +162,26 @@ class CombatParser(object):
 
         if 'ExitCombat' in self.effect(data[4])[1].name:
             models.Fight._combat_fight().finish_at = self.created_at(data[0])
-            models.Fight._combat_fight().save()
-            print 'exit combat: %s' % self.created_at(data[0])
+            fight = models.Fight._combat_fight().save()
+            app.logger.info('Exit combat: %s', fight.finish_at)
+            self.info(fight)
+
             models.Fight.reset()
+
+    def info(self, fight):
+        stat = {}
+        fight_time = fight.finish_at - fight.start_at
+        elapsed_time = divmod(fight_time.total_seconds(), 60)
+        for event in fight.combat_events:
+            if event.stat:
+                if not event.actor.name in stat:
+                    stat[event.actor.name] = {'damage': [0], 'heal': [0]}
+                if 'Damage' in event.effect.name:
+                    stat[event.actor.name]['damage'].append(event.stat.stat_value)
+                if 'Heal' in event.effect.name:
+                    stat[event.actor.name]['heal'].append(event.stat.stat_value)
+        for actor, item in stat.items():
+            app.logger.info(u'Fight\n %s - %s, %s min. %s sec. \n %s did:\n %s damage, %s dps\n %s heal, %s hps', \
+                fight.start_at, fight.finish_at, elapsed_time[0], elapsed_time[1], \
+                actor, sum(item['damage']), sum(item['damage']) / fight_time.total_seconds(), \
+                sum(item['heal']) / fight_time.total_seconds(), sum(item['heal']))
