@@ -1,20 +1,22 @@
 import os
 import re
-import sys
 import weakref
 from datetime import datetime, time
-import logging
 
-from app.models import Actor, Ability, CombatEvent, StatType
-from app.models import get_or_create
-from app.models import Fight
-from app.models import Effect, EffectAction, StatType, EventStat
-from app import logger
+from app import models
+from app import app
 
 
 def slugify(str):
     str = str.lower()
     return re.sub(r'\W+', '_', str)
+
+
+def model_id(model, **kwargs):
+    model_id = slugify(str(model))
+    for key, value in kwargs.iteritems():
+        model_id += slugify(key) + '__' + slugify(value)
+    return model_id
 
 
 class Recount(object):
@@ -28,18 +30,25 @@ class Recount(object):
         return cls._instance
 
     def set(self, key, data):
-        iod = id(key)
-        self._data[iod] = data
-        logger.debug('set key, iod: %s, %s', key, iod)
+        self._data[key] = data
 
     def get(self, key):
-        iod = id(key)
         try:
-            data = self._data[iod]
-            logger.debug('get key, iod: %s, %s, object: %s', key, iod, data)
-            return data
+            return self._data[key]
         except:
             return None
+
+
+def get_or_create(model, **kwargs):
+
+    instance = Recount().get(model_id(model, **kwargs))
+    if instance:
+        return instance
+
+    instance = models.get_or_create(model, **kwargs)
+    Recount().set(model_id(model, **kwargs), instance)
+
+    return instance
 
 
 class InvalidDataError(Exception):
@@ -55,7 +64,7 @@ class CombatParser(object):
     def actor(self, logdata):
 
         name = re.match(r"(?P<name>[@|\w+|\s]{1,})", logdata).groupdict()['name']
-        actor = get_or_create(Actor, name=name.strip())
+        actor = get_or_create(models.Actor, name=name.strip())
         if '@' not in actor.name:
             actor.is_npc = True
         return actor
@@ -64,16 +73,16 @@ class CombatParser(object):
         try:
             match = re.match(self.ability_pattern, logdata)
             group = match.groupdict()
-            ability = Ability.query.filter_by(swotr_id=group['swotr_id']).first()
+            ability = models.Ability.query.filter_by(swotr_id=group['swotr_id']).first()
             if not ability:
-                ability = Ability(name=group['name'], swotr_id=group['swotr_id']).save()
+                ability = models.Ability(name=group['name'], swotr_id=group['swotr_id']).save()
 
             return ability
         except AttributeError, err:
             if re.match(r'\w+', logdata):
-                ability = Ability.query.filter_by(swotr_id=logdata.lower()).first()
+                ability = models.Ability.query.filter_by(swotr_id=logdata.lower()).first()
                 if not ability:
-                    ability = Ability(name=logdata, swotr_id=logdata.lower()).save()
+                    ability = models.Ability(name=logdata, swotr_id=logdata.lower()).save()
                 return ability
 
             raise InvalidDataError(logdata, 'ability not match', self.ability_pattern, err)
@@ -102,8 +111,8 @@ class CombatParser(object):
             match = re.match(self.efect_pattern, logdata)
             group = match.groupdict()
 
-            effect = get_or_create(Effect, name=group['name'], swotr_id=group['name_swotr_id'])
-            effect_action = get_or_create(EffectAction, name=group['action'], swotr_id=group['action_swotr_id'])
+            effect = get_or_create(models.Effect, name=group['name'], swotr_id=group['name_swotr_id'])
+            effect_action = get_or_create(models.EffectAction, name=group['action'], swotr_id=group['action_swotr_id'])
 
             return effect_action, effect
         except AttributeError, err:
@@ -118,14 +127,14 @@ class CombatParser(object):
             threat = stats[1][1:-1]
 
             try:
-                stat_type = get_or_create(StatType, name=stat[1], swotr_id=stat[2][1:-1])
+                stat_type = get_or_create(models.StatType, name=stat[1], swotr_id=stat[2][1:-1])
             except Exception, err:
                 stat_type = None
             is_crit = False
             if '*' in stat_value:
                 stat_value = stat_value[:-1]
                 is_crit = True
-            event_stat = EventStat(stat_type=stat_type, stat_value=stat_value, is_crit=is_crit, threat_value=threat)
+            event_stat = models.EventStat(stat_type=stat_type, stat_value=stat_value, is_crit=is_crit, threat_value=threat)
         except Exception, err:
             event_stat = None
 
@@ -138,20 +147,20 @@ class CombatParser(object):
         data = re.findall(r'[\[<]([^\[<\]>]*)[\]>\)]', line)
 
         if 'EnterCombat' in self.effect(data[4])[1].name:
-            Fight.reset()
-            Fight._combat_fight().start_at = self.created_at(data[0])
+            models.Fight.reset()
+            models.Fight._combat_fight().start_at = self.created_at(data[0])
             print 'enter combat: %s' % self.created_at(data[0])
 
         if data[3]:
-            combat_event = CombatEvent(actor=self.actor(data[1]), target=self.actor(data[2]), \
+            combat_event = models.CombatEvent(actor=self.actor(data[1]), target=self.actor(data[2]), \
                 ability=self.ability(data[3]), created_at=self.created_at(data[0]), \
                 effect_action=self.effect(data[4])[0], effect=self.effect(data[4])[1], stat=self.event_stat(line))
 
-            Fight._combat_fight().combat_events.append(combat_event)
+            models.Fight._combat_fight().combat_events.append(combat_event)
             combat_event.save()
 
         if 'ExitCombat' in self.effect(data[4])[1].name:
-            Fight._combat_fight().finish_at = self.created_at(data[0])
-            Fight._combat_fight().save()
+            models.Fight._combat_fight().finish_at = self.created_at(data[0])
+            models.Fight._combat_fight().save()
             print 'exit combat: %s' % self.created_at(data[0])
-            Fight.reset()
+            models.Fight.reset()

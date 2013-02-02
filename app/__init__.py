@@ -11,12 +11,12 @@ from flask.ext.cache import Cache
 
 from app.admin import init_admin
 
-
 app = Flask(__name__)
 app.config.from_object('configs')
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+if not app.debug:
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.CRITICAL)
 
 db = SQLAlchemy(app)
 api = Api(app)
