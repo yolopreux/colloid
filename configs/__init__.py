@@ -20,6 +20,8 @@ CSRF_SESSION_KEY = "123456"
 
 CACHE_TYPE = 'simple'
 
+LOG_FORMAT = "[%(asctime)-15s]:[%(levelname)s]:[%(name)s]:%(message)s"
+
 try:
     from local_configs import *
 except ImportError:

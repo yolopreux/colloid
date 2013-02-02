@@ -32,15 +32,7 @@ class DbTestCase(unittest.TestCase):
 
 
 class ModelTestCase(DbTestCase):
-
-    def parse_actor_test(self):
-        actor = Actor(data='@yolo').save()
-        self.assertEqual(actor.name, u'@yolo')
-        self.assertFalse(actor.is_npc)
-
-        actor = Actor(data='Thrashing Larva {2960649806151680}:1566004468297').save()
-        self.assertEqual(actor.name, u'Thrashing Larva')
-        self.assertTrue(actor.is_npc)
+    pass
 
 
 class RecountTestCase(DbTestCase):
@@ -78,7 +70,8 @@ class RecountTestCase(DbTestCase):
         '[20:02:49.170] [@Jalo] [@Jalo] [] [Event {836045448945472}: EnterCombat {836045448945489}] ()',
         '[20:02:49.170] [@Jalo] [Operations Training Target MK-5 {2816265890562048}:1179000006870] [Deathmark {808428809224192}] [ApplyEffect {836045448945477}: Deathmark {808428809224449}] ()',
         '[20:02:49.171] [@Jalo] [Operations Training Target MK-5 {2816265890562048}:1179000006870] [Death Field {808433104191488}] [ApplyEffect {836045448945477}: Damage {836045448945501}] (2839* internal {836045448940876}) <2839>',
-        '[20:02:54.766] [@Jalo] [@Jalo] [] [Event {836045448945472}: ExitCombat {836045448945490}] ()', ]
+        '[20:02:54.766] [@Jalo] [@Jalo] [] [Event {836045448945472}: ExitCombat {836045448945490}] ()',
+        '[20:04:19.552] [@Jalo] [Operations Training Target MK-5 {2816265890562048}:1179000006870] [Discharge {808235535695872}] [RemoveEffect {836045448945478}: Shocked (Force) {808235535696133}] ()', ]
 
 
     def parse_log_test(self):
@@ -99,3 +92,4 @@ class RecountTestCase(DbTestCase):
         self.assertEqual(2, len(fights[1].combat_events))
         self.assertEqual(fights[1].start_at.second, 49)
         self.assertEqual(fights[1].finish_at.second, 54)
+

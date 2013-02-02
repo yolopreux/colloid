@@ -68,3 +68,15 @@ class CombatEventModelView(AppModelView):
         super(CombatEventModelView, self).__init__(CombatEvent, **kwargs)
 
 
+class FightModelView(AppModelView):
+    """Actor admin model view"""
+    # Disable model creation
+    can_create = False
+    column_filters = ('start_at', 'finish_at')
+    column_list = ('start_at', 'finish_at',)
+
+    def __init__(self, **kwargs):
+        from app.models import Fight
+        super(FightModelView, self).__init__(Fight, **kwargs)
+
+

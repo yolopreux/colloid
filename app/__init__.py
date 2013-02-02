@@ -1,4 +1,7 @@
 import os
+import json
+import sys
+import logging
 from flask import Flask, request
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.sqlalchemy import Model
@@ -8,8 +11,12 @@ from flask.ext.cache import Cache
 
 from app.admin import init_admin
 
+
 app = Flask(__name__)
 app.config.from_object('configs')
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 db = SQLAlchemy(app)
 api = Api(app)
@@ -44,7 +51,9 @@ class CombatEvent(Resource):
 
     def put(self, event_id):
         from app.recounts import CombatParser
-        CombatParser().parse(request.form['data'])
+        lines = json.loads(request.form['data'])
+        for line in lines:
+            CombatParser().parse(line)
         return True
 
 api.add_resource(CombatEvent, '/api/<string:event_id>')

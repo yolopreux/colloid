@@ -1,50 +1,13 @@
-
-import re
-
 from app import db
 from app import BaseModel
 
 
-def slugify(str):
-    str = str.lower()
-    return re.sub(r'\W+', '_', str)
-
-
-class Recount(object):
-
-    _instance = None
-    _data = {}
-
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super(Recount, cls).__new__(cls, *args, **kwargs)
-        return cls._instance
-
-    def set(self, key, data):
-        self._data[key] = data
-
-    def get(self, key):
-        try:
-            return self._data[key]
-        except:
-            return None
-
-
 def get_or_create(model, **kwargs):
-    recount_key = slugify(str(model))
-    for key, value in kwargs.iteritems():
-        recount_key += slugify(key) + '__' + slugify(value)
 
-    result = Recount().get(recount_key)
-    if result:
-        return result
     instance = model.query.filter_by(**kwargs).first()
-
     if instance:
-        Recount().set(recount_key, instance)
-        return Recount().get(recount_key)
+        return instance
     instance = model(**kwargs)
-
     return instance.save()
 
 
@@ -59,20 +22,6 @@ class Actor(db.Model, BaseModel):
 
     def __unicode__(self):
         return u'%s' % self.name
-
-    def __init__(self, *args, **kwargs):
-        data = None
-        if 'data' in kwargs:
-            try:
-                match = re.match(r"(?P<name>[@|\w+|\s]{1,})", kwargs['data'])
-                self.name = match.groupdict()['name'].strip()
-                if '@' not in kwargs['data']:
-                    self.is_npc = True
-            except AttributeError, err:
-                print err
-#            data = re.findall(r"@([\w+]{1,})", kwargs['data'])
-            del kwargs['data']
-        super(Actor, self).__init__(*args, **kwargs)
 
     def __repr__(self):
         return u'<%s:%s:%s>' % (self.__class__, self.id, self.name)
@@ -97,6 +46,44 @@ class Ability(db.Model, BaseModel):
 
     def __str__(self):
         return u'<%s:%s:%s>' % (self.__class__, self.id, self.name)
+
+
+class StatType(db.Model, BaseModel):
+
+    __tablename__ = 'colloid_stat_types'
+
+    id = db.Column(db.Integer, primary_key=True)
+    swotr_id = db.Column(db.String(80), unique=True)
+    name = db.Column(db.String(80), nullable=False)
+
+    def __unicode__(self):
+        return u'%s' % self.name
+
+    def __str__(self):
+        return u'<%s:%s>' % (self.name, self.swotr_id)
+
+
+
+class EventStat(db.Model, BaseModel):
+
+    __tablename__ = 'colloid_event_stats'
+
+    id = db.Column(db.Integer, primary_key=True)
+    stat_value = db.Column(db.Integer)
+    threat_value = db.Column(db.Integer)
+    stat_type_id = db.Column(db.Integer, db.ForeignKey('colloid_stat_types.id'), nullable=True)
+    stat_type = db.relationship("StatType", backref=db.backref('event_stats'),
+        primaryjoin='EventStat.stat_type_id==StatType.id', uselist=False, single_parent=False)
+    is_crit = db.Column(db.Boolean)
+
+    def __unicode__(self):
+        return u'%s - %s' % (self.stat_value, self.stat_type)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return u'<%s:%s:%s>' % (self.__class__, self.stat_value, self.stat_type)
 
 
 class Target(db.Model, BaseModel):
@@ -138,9 +125,13 @@ class CombatEvent(db.Model, BaseModel):
     effect_id = db.Column(db.Integer, db.ForeignKey('colloid_effects.id'), nullable=False)
     effect = db.relationship("Effect", backref=db.backref('effect_events'),
         primaryjoin='CombatEvent.effect_id==Effect.id', uselist=False, single_parent=False)
+    stat_id = db.Column(db.Integer, db.ForeignKey('colloid_event_stats.id'), nullable=True)
+    stat = db.relationship("EventStat", backref=db.backref('combat_event_stats'),
+        primaryjoin='CombatEvent.stat_id==EventStat.id', uselist=False, single_parent=True)
 
     def __unicode__(self):
-        return u'%s' % self.name
+        return u'Time: %s, Actor: %s, Target: %s, Ability: %s, Stat: %s' % (self.created_at, \
+        self.actor, self.target, self.ability, self.stat)
 
     def __repr__(self):
         return self.__str__()
@@ -208,6 +199,7 @@ class CombatFight(object):
         fight = self.class_fight(start_at=self.start_at, finish_at=self.finish_at, combat_events=self.combat_events)
         fight.save()
 
+
 class Fight(db.Model, BaseModel):
 
     __tablename__ = 'colloid_fights'
@@ -220,11 +212,11 @@ class Fight(db.Model, BaseModel):
     combat_events = db.relationship('CombatEvent', secondary=event_fights,
         backref=db.backref('fights', lazy='dynamic'))
 
-#    def __str__(self):
-#        return u'<combat_events:%s>' % self.combat_events
+    def __str__(self):
+        return u'<combat_events:%s>' % self.combat_events
 
-#    def __repr__(self):
-#        return u'<instance:%s:%s>' % (super(Fight, self).__repr__(), self.__str__())
+    def __repr__(self):
+        return u'<instance:%s:%s>' % (super(Fight, self).__repr__(), self.__str__())
 
     @classmethod
     def reset(cls):
