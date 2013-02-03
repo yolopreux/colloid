@@ -2,15 +2,14 @@ import os
 import re
 import weakref
 from datetime import datetime, time
-from datetime import timedelta
+import math
 
 from app import models
 from app import app
 
 
-def slugify(str):
-    str = str.lower()
-    return re.sub(r'\W+', '_', str)
+def slugify(string):
+    return re.sub(r'\W+', '_', string.lower())
 
 
 def model_id(model, **kwargs):
@@ -25,6 +24,13 @@ class Recount(object):
     _instance = None
     _data = weakref.WeakValueDictionary()
 
+    data = {}
+    heal_done = {}
+    damage_done = {}
+
+    counter_start = None
+    counter_end = None
+
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
             cls._instance = super(Recount, cls).__new__(cls, *args, **kwargs)
@@ -38,6 +44,55 @@ class Recount(object):
             return self._data[key]
         except:
             return None
+
+    def add_heal(self, source, value):
+        if source not in self.heal_done:
+            self.heal_done[source] = []
+        self.heal_done[source].append(value)
+
+    def add_damage(self, source, value):
+        if source not in self.damage_done:
+            self.damage_done[source] = []
+        self.damage_done[source].append(value)
+
+    def get_heal_done(self):
+        duration = self.counter_end - self.counter_start
+        if not duration.seconds:
+            return
+
+        for source, heal in self.heal_done.iteritems():
+            heal_done = sum(heal)
+            hps = heal_done / duration.total_seconds()
+            yield source, heal_done, hps
+
+    def get_damage_done(self):
+        duration = None
+        try:
+            duration = self.counter_end - self.counter_start
+        except TypeError, err:
+            print err
+        if not duration or not duration.seconds:
+            return
+        for source, damage in self.damage_done.items():
+            yield 'Damage done %s:%s %s (DPS: %s)' % (source, math.fsum(damage),
+               str(duration), math.fsum(damage) / duration.seconds)
+
+    def get_counter_time(self):
+        if (self.counter_start and self.counter_end):
+            return "Counter combat: %s - %s" % (datetime.strftime(
+              self.counter_start, '%H:%M:%S.%f'),
+            datetime.strftime(self.counter_end, '%H:%M:%S.%f'))
+        return 'Invalid counter time'
+
+    def reset(self):
+        self.damage_done = {}
+        self.heal_done = {}
+        self.counter_start = None
+        self.counter_end = None
+
+    def stats(self):
+
+        return self.get_damage_done(), self.get_heal_done()
 
 
 def get_or_create(model, **kwargs):
@@ -56,68 +111,93 @@ class InvalidDataError(Exception):
     pass
 
 
+class ParseLogError(InvalidDataError):
+    pass
+
+
 class CombatParser(object):
 
 
     ability_pattern = r"(?P<name>[a-zA-Z\s^/{^/}]{0,}) {(?P<swotr_id>[\d+]{1,})}"
     efect_pattern = r"(?P<action>[a-zA-Z'\s^/{^/}]{0,}) {(?P<action_swotr_id>[\d+]{1,})}: (?P<name>[a-zA-Z'\s^/{^/}/(/)]{0,}) {(?P<name_swotr_id>[\d+]{1,})}"
+    actor_pattern = r'(?P<name>[@|\w+|\s]{1,})'
 
     def actor(self, logdata):
+        """Match actor in logdata"""
+        match = re.match(self.actor_pattern, logdata)
+        if not match:
+            raise InvalidDataError(logdata, 'invalid actor or target', self.actor_pattern)
 
-        name = re.match(r"(?P<name>[@|\w+|\s]{1,})", logdata).groupdict()['name']
+        name = match.groupdict()['name']
         actor = get_or_create(models.Actor, name=name.strip())
         if '@' not in actor.name:
             actor.is_npc = True
+
         return actor
 
     def ability(self, logdata):
+        """Match ability in logdata"""
         try:
             match = re.match(self.ability_pattern, logdata)
             group = match.groupdict()
             ability = models.Ability.query.filter_by(swotr_id=group['swotr_id']).first()
             if not ability:
-                ability = models.Ability(name=group['name'], swotr_id=group['swotr_id']).save()
+                ability = models.Ability(name=group['name'],
+                                         swotr_id=group['swotr_id']).save()
 
             return ability
         except AttributeError, err:
             if re.match(r'\w+', logdata):
                 ability = models.Ability.query.filter_by(swotr_id=logdata.lower()).first()
                 if not ability:
-                    ability = models.Ability(name=logdata, swotr_id=logdata.lower()).save()
+                    ability = models.Ability(name=logdata,
+                                             swotr_id=logdata.lower()).save()
                 return ability
 
-            raise InvalidDataError(logdata, 'ability not match', self.ability_pattern, err)
+            raise InvalidDataError(logdata, 'ability not match',
+                                   self.ability_pattern, err)
 
     def created_at(self, logdata):
         today = datetime.today()
         log_time = datetime.strptime(logdata, "%H:%M:%S.%f")
 
-        return datetime.combine(today, time(log_time.hour, log_time.minute, log_time.second, log_time.microsecond))
+        return datetime.combine(today, time(log_time.hour, log_time.minute,
+                                            log_time.second,
+                                            log_time.microsecond))
 
     def run(self, file_name):
+        """
+        Open log file
+        Start parse combat log
+        :param file_name: - combat log filename
+        """
         try:
-            file = open(os.path.realpath(file_name), 'r')
+            file_log = open(os.path.realpath(file_name), 'r')
         except IOError, err:
             print err
             return
 
-        for line in file.readlines():
+        for line in file_log.readlines():
             try:
                 self.parse(line)
             except Exception, err:
-                print err
+                raise err
 
     def effect(self, logdata):
         try:
             match = re.match(self.efect_pattern, logdata)
             group = match.groupdict()
 
-            effect = get_or_create(models.Effect, name=group['name'], swotr_id=group['name_swotr_id'])
-            effect_action = get_or_create(models.EffectAction, name=group['action'], swotr_id=group['action_swotr_id'])
+            effect = get_or_create(models.Effect, name=group['name'],
+                                   swotr_id=group['name_swotr_id'])
+            effect_action = get_or_create(models.EffectAction,
+                                          name=group['action'],
+                                          swotr_id=group['action_swotr_id'])
 
             return effect_action, effect
         except AttributeError, err:
-            raise InvalidDataError(logdata, 'effect not match', self.efect_pattern, err)
+            raise InvalidDataError(logdata, 'effect not match',
+                                   self.efect_pattern, err)
 
     def event_stat(self, line):
 
@@ -128,44 +208,64 @@ class CombatParser(object):
             threat = stats[1][1:-1]
 
             try:
-                stat_type = get_or_create(models.StatType, name=stat[1], swotr_id=stat[2][1:-1])
-            except Exception, err:
+                stat_type = get_or_create(models.StatType, name=stat[1],
+                                          swotr_id=stat[2][1:-1])
+            except Exception:
                 stat_type = None
             is_crit = False
             if '*' in stat_value:
                 stat_value = stat_value[:-1]
                 is_crit = True
-            event_stat = models.EventStat(stat_type=stat_type, stat_value=stat_value, is_crit=is_crit, threat_value=threat)
+            event_stat = models.EventStat(stat_type=stat_type,
+                                          stat_value=stat_value,
+                                          is_crit=is_crit, threat_value=threat)
         except Exception, err:
             event_stat = None
 
         return event_stat
 
-
     def parse(self, line):
+        try:
+            self.recount(line)
+        except InvalidDataError, err:
+            raise ParseLogError(err, line)
 
+    def recount(self, line):
 #        data = re.findall(r'[\[<\(]([^\[<\(\]>\)]*)[\]>\)]', line)
         data = re.findall(r'[\[<]([^\[<\]>]*)[\]>\)]', line)
+        event = None
+        if data[3]:
+            event = models.CombatEvent(actor=self.actor(data[1]),
+                                       target=self.actor(data[2]),
+                                       ability=self.ability(data[3]),
+                                       created_at=self.created_at(data[0]),
+                                       effect_action=self.effect(data[4])[0],
+                                       effect=self.effect(data[4])[1],
+                                       stat=self.event_stat(line))
+
+            models.Fight._combat_fight().combat_events.append(event)
+            event.save()
 
         if 'EnterCombat' in self.effect(data[4])[1].name:
             models.Fight.reset()
             models.Fight._combat_fight().start_at = self.created_at(data[0])
             app.logger.info('Enter combat: %s', self.created_at(data[0]))
+            Recount().reset()
+            Recount().counter_start = models.Fight._combat_fight().start_at
 
-        if data[3]:
-            combat_event = models.CombatEvent(actor=self.actor(data[1]), target=self.actor(data[2]), \
-                ability=self.ability(data[3]), created_at=self.created_at(data[0]), \
-                effect_action=self.effect(data[4])[0], effect=self.effect(data[4])[1], stat=self.event_stat(line))
-
-            models.Fight._combat_fight().combat_events.append(combat_event)
-            combat_event.save()
+        if event and event.stat:
+            if event.is_damage():
+                Recount().add_damage(event.actor.name, event.stat.stat_value)
+            if event.is_heal():
+                Recount().add_heal(event.actor.name, event.stat.stat_value)
 
         if 'ExitCombat' in self.effect(data[4])[1].name:
             models.Fight._combat_fight().finish_at = self.created_at(data[0])
             fight = models.Fight._combat_fight().save()
             app.logger.info('Exit combat: %s', fight.finish_at)
             self.info(fight)
-
+            Recount().get_heal_done()
+            Recount().reset()
             models.Fight.reset()
 
     def info(self, fight):
@@ -182,6 +282,8 @@ class CombatParser(object):
                     stat[event.actor.name]['heal'].append(event.stat.stat_value)
         for actor, item in stat.items():
             app.logger.info(u'Fight\n %s - %s, %s min. %s sec. \n %s did:\n %s damage, %s dps\n %s heal, %s hps', \
-                fight.start_at, fight.finish_at, elapsed_time[0], elapsed_time[1], \
-                actor, sum(item['damage']), sum(item['damage']) / fight_time.total_seconds(), \
-                sum(item['heal']) / fight_time.total_seconds(), sum(item['heal']))
+                            fight.start_at, fight.finish_at, elapsed_time[0],
+                            elapsed_time[1], actor, sum(item['damage']),
+                            sum(item['damage']) / fight_time.total_seconds(),
+                            sum(item['heal']) / fight_time.total_seconds(),
+                            sum(item['heal']))

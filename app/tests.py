@@ -1,12 +1,15 @@
 import unittest
 import os
 import tempfile
+import glob
 from flask.ext.cache import Cache
 
 from app import app
 from app.models import Actor, Effect
 from app.recounts import CombatParser
-from app.models import CombatEvent, Fight
+from app.models import CombatEvent
+from app.models import Fight
+from app.recounts import Recount
 
 
 class DbTestCase(unittest.TestCase):
@@ -73,7 +76,6 @@ class RecountTestCase(DbTestCase):
         '[20:02:54.766] [@Jalo] [@Jalo] [] [Event {836045448945472}: ExitCombat {836045448945490}] ()',
         '[20:04:19.552] [@Jalo] [Operations Training Target MK-5 {2816265890562048}:1179000006870] [Discharge {808235535695872}] [RemoveEffect {836045448945478}: Shocked (Force) {808235535696133}] ()', ]
 
-
     def parse_log_test(self):
         for combat in self.combat_log:
             CombatParser().parse(combat)
@@ -92,3 +94,18 @@ class RecountTestCase(DbTestCase):
         self.assertEqual(2, len(fights[1].combat_events))
         self.assertEqual(fights[1].start_at.second, 49)
         self.assertEqual(fights[1].finish_at.second, 54)
+
+    def parse_file_test(self):
+        """
+        Load and parse logs inside app/combat directory
+        """
+        instance_id = id(Recount())
+        path = os.path.realpath('app/combat')
+        files = glob.glob(path + '/combat_*.txt')
+        if not len(files):
+            self.fail('Pending')
+        for file_path in files:
+            for line in open(file_path).readlines():
+                CombatParser().parse(line)
+
+        self.assertEqual(Recount(), instance_id)

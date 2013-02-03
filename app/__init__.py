@@ -14,7 +14,7 @@ from app.admin import init_admin
 app = Flask(__name__)
 app.config.from_object('configs')
 
-if not app.debug:
+if not app.debug and app.testing:
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.CRITICAL)
 

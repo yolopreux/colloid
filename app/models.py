@@ -71,7 +71,8 @@ class EventStat(db.Model, BaseModel):
     id = db.Column(db.Integer, primary_key=True)
     stat_value = db.Column(db.Integer)
     threat_value = db.Column(db.Integer)
-    stat_type_id = db.Column(db.Integer, db.ForeignKey('colloid_stat_types.id'), nullable=True)
+    stat_type_id = db.Column(db.Integer, db.ForeignKey('colloid_stat_types.id'),
+                             nullable=True)
     stat_type = db.relationship("StatType", backref=db.backref('event_stats'),
         primaryjoin='EventStat.stat_type_id==StatType.id', uselist=False, single_parent=False)
     is_crit = db.Column(db.Boolean)
@@ -140,6 +141,12 @@ class CombatEvent(db.Model, BaseModel):
         return u'<%s, Time:%s, Actor:%s, Target:%s, Ability:%s>' % (self.__class__, \
             self.created_at, self.actor, self.target, self.ability)
 
+    def is_heal(self):
+        return 'Heal' in self.effect.name
+
+    def is_damage(self):
+        return 'Damage' in self.effect.name
+
 
 class Guild(db.Model, BaseModel):
 
@@ -196,7 +203,9 @@ class CombatFight(object):
         cls.class_fight = fight_class
 
     def save(self):
-        fight = self.class_fight(start_at=self.start_at, finish_at=self.finish_at, combat_events=self.combat_events)
+        fight = self.class_fight(start_at=self.start_at,
+                                 finish_at=self.finish_at,
+                                 combat_events=self.combat_events)
         return fight.save()
 
 
@@ -216,7 +225,8 @@ class Fight(db.Model, BaseModel):
         return u'<combat_events:%s>' % self.combat_events
 
     def __repr__(self):
-        return u'<instance:%s:%s>' % (super(Fight, self).__repr__(), self.__str__())
+        return u'<instance:%s:%s>' % (super(Fight, self).__repr__(),
+                                      self.__str__())
 
     @classmethod
     def reset(cls):
