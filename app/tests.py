@@ -30,6 +30,9 @@ class DbTestCase(unittest.TestCase):
     def tearDown(self):
         """Executes after each tests"""
 
+        for fight in Fight.query.all():
+            fight.delete(commit=False)
+        Fight.db.session.commit()
         os.close(self.db_fd)
         os.unlink(self.app.config['DATABASE'])
 
@@ -108,4 +111,4 @@ class RecountTestCase(DbTestCase):
             for line in open(file_path).readlines():
                 CombatParser().parse(line)
 
-        self.assertEqual(Recount(), instance_id)
+        self.assertEqual(id(Recount()), instance_id)

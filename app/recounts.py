@@ -117,6 +117,7 @@ class ParseLogError(InvalidDataError):
 
 class CombatParser(object):
 
+    UNDEFINED = 'undefinded'
 
     ability_pattern = r"(?P<name>[a-zA-Z\s^/{^/}]{0,}) {(?P<swotr_id>[\d+]{1,})}"
     efect_pattern = r"(?P<action>[a-zA-Z'\s^/{^/}]{0,}) {(?P<action_swotr_id>[\d+]{1,})}: (?P<name>[a-zA-Z'\s^/{^/}/(/)]{0,}) {(?P<name_swotr_id>[\d+]{1,})}"
@@ -124,11 +125,14 @@ class CombatParser(object):
 
     def actor(self, logdata):
         """Match actor in logdata"""
-        match = re.match(self.actor_pattern, logdata)
-        if not match:
-            raise InvalidDataError(logdata, 'invalid actor or target', self.actor_pattern)
+        if not logdata:
+            name = self.UNDEFINED
+        else:
+            match = re.match(self.actor_pattern, logdata)
+            if not match:
+                raise InvalidDataError(logdata, 'invalid actor or target', self.actor_pattern)
+            name = match.groupdict()['name']
 
-        name = match.groupdict()['name']
         actor = get_or_create(models.Actor, name=name.strip())
         if '@' not in actor.name:
             actor.is_npc = True
@@ -234,9 +238,13 @@ class CombatParser(object):
 #        data = re.findall(r'[\[<\(]([^\[<\(\]>\)]*)[\]>\)]', line)
         data = re.findall(r'[\[<]([^\[<\]>]*)[\]>\)]', line)
         event = None
+        actor = self.actor(data[1])
+        if not data[2]:
+            target = actor
+        else:
+            target = self.actor(data[2])
         if data[3]:
-            event = models.CombatEvent(actor=self.actor(data[1]),
-                                       target=self.actor(data[2]),
+            event = models.CombatEvent(actor=actor, target=target,
                                        ability=self.ability(data[3]),
                                        created_at=self.created_at(data[0]),
                                        effect_action=self.effect(data[4])[0],
@@ -249,7 +257,7 @@ class CombatParser(object):
         if 'EnterCombat' in self.effect(data[4])[1].name:
             models.Fight.reset()
             models.Fight._combat_fight().start_at = self.created_at(data[0])
-            app.logger.info('Enter combat: %s', self.created_at(data[0]))
+#            app.logger.info('Enter combat: %s', self.created_at(data[0]))
             Recount().reset()
             Recount().counter_start = models.Fight._combat_fight().start_at
 
@@ -262,8 +270,8 @@ class CombatParser(object):
         if 'ExitCombat' in self.effect(data[4])[1].name:
             models.Fight._combat_fight().finish_at = self.created_at(data[0])
             fight = models.Fight._combat_fight().save()
-            app.logger.info('Exit combat: %s', fight.finish_at)
-            self.info(fight)
+#            app.logger.info('Exit combat: %s', fight.finish_at)
+#            self.info(fight)
             Recount().get_heal_done()
             Recount().reset()
             models.Fight.reset()

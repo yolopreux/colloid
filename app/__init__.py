@@ -23,11 +23,26 @@ api = Api(app)
 cache = Cache()
 cache.init_app(app, config={'CACHE_TYPE': 'simple'})
 
+
 class BaseModel(Model):
     """Base class for models"""
     db = db
+
     def save(self, commit=True):
+        """Save save or add to db session"""
         self.db.session.add(self)
+        if commit:
+            try:
+                self.db.session.commit()
+            except:
+                self.db.session.rollback()
+                raise
+
+        return self
+
+    def delete(self, commit=True):
+        """Delete or add to db session"""
+        self.db.session.delete(self)
         if commit:
             try:
                 self.db.session.commit()
