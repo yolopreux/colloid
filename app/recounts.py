@@ -232,7 +232,8 @@ class CombatParser(object):
         try:
             self.recount(line)
         except InvalidDataError, err:
-            raise ParseLogError(err, line)
+            from app import app
+            app.logger.error(err)
 
     def recount(self, line):
 #        data = re.findall(r'[\[<\(]([^\[<\(\]>\)]*)[\]>\)]', line)

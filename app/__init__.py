@@ -14,10 +14,11 @@ from app.admin import init_admin
 app = Flask(__name__)
 app.config.from_object('configs')
 
-if not app.debug and app.testing:
+if not app.debug or not app.testing:
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.CRITICAL)
-
+FORMAT = '%(asctime)-15s %(clientip)s %(user)-8s %(message)s'
+logging.basicConfig(filename='app.log', format=FORMAT)
 db = SQLAlchemy(app)
 api = Api(app)
 cache = Cache()

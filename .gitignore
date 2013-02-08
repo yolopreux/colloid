@@ -40,3 +40,4 @@ venv
 .settings
 configs/local_configs.py
 combat*
+*.log
