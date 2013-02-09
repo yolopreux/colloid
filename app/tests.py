@@ -94,7 +94,7 @@ class RecountTestCase(DbTestCase):
         self.assertEqual(14, len(fights[0].combat_events))
         self.assertEqual(fights[0].start_at.second, 45)
         self.assertEqual(fights[0].finish_at.second, 49)
-        self.assertEqual(2, len(fights[1].combat_events))
+        self.assertEqual(4, len(fights[1].combat_events))
         self.assertEqual(fights[1].start_at.second, 49)
         self.assertEqual(fights[1].finish_at.second, 54)
 

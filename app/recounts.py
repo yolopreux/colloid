@@ -201,15 +201,23 @@ class CombatParser(object):
     def event_stat(self, line):
 
         try:
-            stats = re.compile(r'(\(\d+.*\)) (\<\d+.*\>)').findall(line)[0]
+            compiled = re.compile(r'(\(\d+.*\)) (\<\d+.*\>)').findall(line)
+            try:
+                stats = compiled[0]
+            except IndexError:
+                stats = re.compile(r'(\(\d+.*\))').findall(line)
+
             stat = stats[0][1:-1].split(' ')
             stat_value = stat[0]
-            threat = stats[1][1:-1]
+            try:
+                threat = stats[1][1:-1]
+            except IndexError:
+                threat = None
 
             try:
                 stat_type = get_or_create(models.StatType, name=stat[1],
                                           swotr_id=stat[2][1:-1])
-            except Exception:
+            except IndexError:
                 stat_type = None
             is_crit = False
             if '*' in stat_value:
