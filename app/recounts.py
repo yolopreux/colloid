@@ -126,7 +126,7 @@ class CombatParser(object):
 
     ability_pattern = r"(?P<name>[a-zA-Z\s^/{^/}]{0,}) {(?P<swotr_id>[\d+]{1,})}"
     efect_pattern = r"(?P<action>[a-zA-Z'\s^/{^/}]{0,}) {(?P<action_swotr_id>[\d+]{1,})}: (?P<name>[a-zA-Z'\s^/{^/}/(/)]{0,}) {(?P<name_swotr_id>[\d+]{1,})}"
-    actor_pattern = r'(?P<name>[@|\w+|\s]{1,})'
+    actor_pattern = r'(?P<name>[@|\w+|\s|/:]{1,})'
 
     def actor(self, logdata=None):
         """Match actor in logdata"""
