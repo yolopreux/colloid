@@ -1,3 +1,12 @@
+"""
+    colloid project
+    ~~~~~~~~~~~~~~
+
+    Combat log analizer.
+
+    :copyright: (c) 2013 by Darek <netmik12 [AT] gmail [DOT] com>
+    :license: BSD, see LICENSE for more details
+"""
 import os
 import re
 import weakref
@@ -98,6 +107,7 @@ class Recount(object):
     @classmethod
     def refresh(cls):
         cls._instance = None
+        cls._data = weakref.WeakValueDictionary()
 
 
 def get_or_create(model, **kwargs):

@@ -1,4 +1,4 @@
-colloid
+COLLOID - SWOTR Combat Log Analizer
 =======
 
 

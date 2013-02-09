@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 # encoding: utf-8
+"""
+    colloid project
+    ~~~~~~~~~~~~~~
+
+    Combat log analizer.
+
+    :copyright: (c) 2013 by Darek <netmik12 [AT] gmail [DOT] com>
+    :license: MIT, see LICENSE for more details
+"""
 from flask import Flask
 from flask.ext.script import Manager
 from flask.ext.script import prompt_bool

@@ -1,3 +1,12 @@
+"""
+    colloid project
+    ~~~~~~~~~~~~~~
+
+    Combat log analizer.
+
+    :copyright: (c) 2013 by Darek <netmik12 [AT] gmail [DOT] com>
+    :license: BSD, see LICENSE for more details
+"""
 from flask_admin import Admin
 
 from app.admin import views
