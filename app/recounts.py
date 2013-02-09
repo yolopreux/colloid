@@ -253,7 +253,7 @@ class CombatParser(object):
                                        stat=self.event_stat(line))
 
             models.Fight._combat_fight().combat_events.append(event)
-            event.save()
+#            event.save()
 
         if 'EnterCombat' in self.effect(data[4])[1].name:
             models.Fight.reset()
