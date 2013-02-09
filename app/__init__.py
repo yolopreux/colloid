@@ -15,8 +15,7 @@ app = Flask(__name__)
 app.config.from_object('configs')
 
 if not app.debug and not app.testing:
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.CRITICAL)
+    app.logger.setLevel(logging.INFO)
 
 db = SQLAlchemy(app)
 api = Api(app)
