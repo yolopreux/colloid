@@ -8,7 +8,7 @@ def get_or_create(model, **kwargs):
     if instance:
         return instance
     instance = model(**kwargs)
-    return instance.save()
+    return instance
 
 
 class Actor(db.Model, BaseModel):
@@ -74,7 +74,9 @@ class EventStat(db.Model, BaseModel):
     stat_type_id = db.Column(db.Integer, db.ForeignKey('colloid_stat_types.id'),
                              nullable=True)
     stat_type = db.relationship("StatType", backref=db.backref('event_stats'),
-        primaryjoin='EventStat.stat_type_id==StatType.id', uselist=False, single_parent=False)
+                                primaryjoin='EventStat.stat_type_id==StatType.id',
+                                uselist=False,
+        single_parent=False)
     is_crit = db.Column(db.Boolean)
 
     def __unicode__(self):
@@ -99,10 +101,14 @@ class Target(db.Model, BaseModel):
 
 
 event_fights = db.Table('colloid_event_fights', db.Model.metadata,
-    db.Column('fight_id', db.Integer, db.ForeignKey('colloid_fights.id',
-        onupdate="cascade", ondelete='cascade'), primary_key=True),
-    db.Column('combat_event_id', db.Integer, db.ForeignKey('colloid_combat_events.id',
-        onupdate="cascade", ondelete='cascade'), primary_key=True)
+    db.Column('fight_id', db.Integer,
+              db.ForeignKey('colloid_fights.id', onupdate="cascade",
+                            ondelete='cascade'),
+              primary_key=True),
+    db.Column('combat_event_id', db.Integer,
+              db.ForeignKey('colloid_combat_events.id',
+                            onupdate="cascade", ondelete='cascade'),
+              primary_key=True)
 )
 
 class CombatEvent(db.Model, BaseModel):
@@ -111,28 +117,41 @@ class CombatEvent(db.Model, BaseModel):
 
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime)
-    actor_id = db.Column(db.Integer, db.ForeignKey('colloid_actors.id'), nullable=False)
+    actor_id = db.Column(db.Integer, db.ForeignKey('colloid_actors.id'),
+                         nullable=False)
     actor = db.relationship("Actor", backref=db.backref('actor_events'),
-        primaryjoin='CombatEvent.actor_id==Actor.id', uselist=False, single_parent=False)
-    target_id = db.Column(db.Integer, db.ForeignKey('colloid_actors.id'), nullable=False)
+                            primaryjoin='CombatEvent.actor_id==Actor.id',
+                            uselist=False, single_parent=False)
+    target_id = db.Column(db.Integer, db.ForeignKey('colloid_actors.id'),
+                          nullable=False)
     target = db.relationship("Actor", backref=db.backref('target_events'),
-        primaryjoin='CombatEvent.target_id==Actor.id', uselist=False, single_parent=False)
-    ability_id = db.Column(db.Integer, db.ForeignKey('colloid_abilities.id'), nullable=False)
+                             primaryjoin='CombatEvent.target_id==Actor.id',
+                             uselist=False, single_parent=False)
+    ability_id = db.Column(db.Integer, db.ForeignKey('colloid_abilities.id'),
+                           nullable=False)
     ability = db.relationship("Ability", backref=db.backref('abilitiy_events'),
-        primaryjoin='CombatEvent.ability_id==Ability.id', uselist=False, single_parent=False)
-    effect_action_id = db.Column(db.Integer, db.ForeignKey('colloid_effect_actions.id'), nullable=False)
-    effect_action = db.relationship("EffectAction", backref=db.backref('effect_action_events'),
-        primaryjoin='CombatEvent.effect_action_id==EffectAction.id', uselist=False, single_parent=False)
-    effect_id = db.Column(db.Integer, db.ForeignKey('colloid_effects.id'), nullable=False)
+                              primaryjoin='CombatEvent.ability_id==Ability.id',
+                              uselist=False, single_parent=False)
+    effect_action_id = db.Column(db.Integer,
+                                 db.ForeignKey('colloid_effect_actions.id'),
+                                 nullable=False)
+    effect_action = db.relationship("EffectAction",
+                                    backref=db.backref('effect_action_events'),
+                                    primaryjoin='CombatEvent.effect_action_id==EffectAction.id',
+                                    uselist=False, single_parent=False)
+    effect_id = db.Column(db.Integer, db.ForeignKey('colloid_effects.id'),
+                          nullable=False)
     effect = db.relationship("Effect", backref=db.backref('effect_events'),
-        primaryjoin='CombatEvent.effect_id==Effect.id', uselist=False, single_parent=False)
-    stat_id = db.Column(db.Integer, db.ForeignKey('colloid_event_stats.id'), nullable=True)
+                             primaryjoin='CombatEvent.effect_id==Effect.id',
+                             uselist=False, single_parent=False)
+    stat_id = db.Column(db.Integer, db.ForeignKey('colloid_event_stats.id'),
+                        nullable=True)
     stat = db.relationship("EventStat", backref=db.backref('combat_event_stats'),
-        primaryjoin='CombatEvent.stat_id==EventStat.id', uselist=False, single_parent=True)
+                           primaryjoin='CombatEvent.stat_id==EventStat.id',
+                           uselist=False, single_parent=True)
 
     def __unicode__(self):
-        return u'Time: %s, Actor: %s, Target: %s, Ability: %s, Stat: %s' % (self.created_at, \
-        self.actor, self.target, self.ability, self.stat)
+        return u'Time: %s, Actor: %s, Target: %s, Ability: %s, Stat: %s' % (self.created_at, self.actor, self.target, self.ability, self.stat)
 
     def __repr__(self):
         return self.__str__()
