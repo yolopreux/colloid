@@ -274,6 +274,7 @@ class CombatParser(object):
                 app.logger.info('Damage: %s:%s %s', event.actor.name, event.ability.name, event.stat.stat_value)
             if event.is_heal():
                 Recount().add_heal(event.actor.name, event.stat.stat_value)
+                app.logger.info('Heal: %s:%s %s', event.actor.name, event.ability.name, event.stat.stat_value)
 
         if 'ExitCombat' in effect_name:
             models.Fight._combat_fight().finish_at = self.created_at(data[0])
@@ -301,5 +302,4 @@ class CombatParser(object):
                             fight.start_at, fight.finish_at, elapsed_time[0],
                             elapsed_time[1], actor, sum(item['damage']),
                             sum(item['damage']) / fight_time.total_seconds(),
-                            sum(item['heal']) / fight_time.total_seconds(),
-                            sum(item['heal']))
+                            sum(item['heal']), sum(item['heal']) / fight_time.total_seconds())
