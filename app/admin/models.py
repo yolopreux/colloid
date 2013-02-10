@@ -7,8 +7,13 @@
     :copyright: (c) 2013 by Darek <netmik12 [AT] gmail [DOT] com>
     :license: BSD, see LICENSE for more details
 """
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.orm import subqueryload
+from sqlalchemy.sql.expression import desc
 from flask_admin.contrib.sqlamodel import ModelView
 from flask_login import current_user
+from sqlalchemy import or_, Column
+from flask.ext.admin.contrib.sqlamodel import tools
 
 
 class DbSessionError(Exception):
@@ -27,8 +32,9 @@ class AppModelView(ModelView):
         if not session:
             raise DbSessionError
 
-        super(AppModelView, self).__init__(model, session, name, category,
-            endpoint, url)
+        super(AppModelView, self).__init__(model=model, session=session,
+                                           name=name, category=category,
+                                           endpoint=endpoint, url=url)
 
     def is_accessible(self):
         return True
@@ -69,7 +75,9 @@ class CombatEventModelView(AppModelView):
     """Actor admin model view"""
     # Disable model creation
     can_create = False
-    column_filters = ('created_at',)
+    column_filters = ('created_at', 'effect', 'ability', 'effect_action',)
+
+    can_edit = False
 
     def __init__(self, **kwargs):
         from app.models import CombatEvent, Ability
@@ -81,6 +89,7 @@ class FightModelView(AppModelView):
     """Actor admin model view"""
     # Disable model creation
     can_create = False
+    can_edit = False
     column_filters = ('start_at', 'finish_at')
     column_list = ('start_at', 'finish_at',)
 
