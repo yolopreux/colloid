@@ -12,6 +12,7 @@ import re
 import weakref
 from datetime import datetime, time
 import math
+import glob
 from sqlalchemy.orm.exc import DetachedInstanceError
 
 from app import models
@@ -132,6 +133,7 @@ class ParseLogError(InvalidDataError):
 
 class CombatParser(object):
 
+    date = None
     UNDEFINED = 'undefinded'
 
     ability_pattern = r"(?P<name>[a-zA-Z\s^/{^/}]{0,}) {(?P<swotr_id>[\d+]{1,})}"
@@ -168,30 +170,55 @@ class CombatParser(object):
         return ability
 
     def created_at(self, logdata):
+        created_date = datetime.today()
+        if self.date:
+            created_date = self.date
         today = datetime.today()
         log_time = datetime.strptime(logdata, "%H:%M:%S.%f")
 
-        return datetime.combine(today, time(log_time.hour, log_time.minute,
+        return datetime.combine(created_date, time(log_time.hour, log_time.minute,
                                             log_time.second,
                                             log_time.microsecond))
 
-    def run(self, file_name):
+    def run(self, file_name=None, directory=None):
         """
         Open log file
         Start parse combat log
         :param file_name: - combat log filename
+        :param directory: combat log directory path
         """
+        if not file_name and not directory:
+            directory = 'app/combat'
         try:
-            file_log = open(os.path.realpath(file_name), 'r')
+            if file_name:
+                self.date = self.created_date(filename=file_name)
+                file_log = open(os.path.realpath(file_name), 'r')
+                for line in file_log.readlines():
+                    try:
+                        self.parse(line)
+                    except Exception, err:
+                        app.logger.warn(err)
+                return
+
+            path = os.path.realpath(directory)
+            files = glob.glob(path + '/combat_*.txt')
+            if not len(files):
+                app.logger.warn("No combats were found in path %s", path)
+            for file_path in files:
+                self.date = self.created_date(filename=file_path)
+                for line in open(file_path).readlines():
+                    try:
+                        self.parse(line)
+                    except Exception, err:
+                        app.logger.warn(err)
+
         except IOError, err:
             print err
             return
 
-        for line in file_log.readlines():
-            try:
-                self.parse(line)
-            except Exception, err:
-                raise err
+    def created_date(self, filename):
+        time = os.path.getctime(filename)
+        return datetime.fromtimestamp(time)
 
     def effect(self, logdata):
         try:
@@ -289,10 +316,10 @@ class CombatParser(object):
         if event and event.stat:
             if event.is_damage():
                 Recount().add_damage(event.actor.name, event.stat.stat_value)
-                app.logger.info('Damage: %s:%s %s', event.actor.name, event.ability.name, event.stat.stat_value)
+                app.logger.debug('Damage: %s:%s %s', event.actor.name, event.ability.name, event.stat.stat_value)
             if event.is_heal():
                 Recount().add_heal(event.actor.name, event.stat.stat_value)
-                app.logger.info('Heal: %s:%s %s', event.actor.name, event.ability.name, event.stat.stat_value)
+                app.logger.debug('Heal: %s:%s %s', event.actor.name, event.ability.name, event.stat.stat_value)
 
         if 'ExitCombat' in effect_name:
             models.Fight._combat_fight().finish_at = self.created_at(data[0])
