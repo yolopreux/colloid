@@ -27,8 +27,9 @@ class AppModelView(ModelView):
         if not session:
             raise DbSessionError
 
-        super(AppModelView, self).__init__(model, session, name, category,
-            endpoint, url)
+        super(AppModelView, self).__init__(model=model, session=session,
+                                           name=name, category=category,
+                                           endpoint=endpoint, url=url)
 
     def is_accessible(self):
         return True
@@ -69,7 +70,9 @@ class CombatEventModelView(AppModelView):
     """Actor admin model view"""
     # Disable model creation
     can_create = False
-    column_filters = ('created_at',)
+    column_filters = ('created_at', 'effect', 'ability', 'effect_action',)
+
+    can_edit = False
 
     def __init__(self, **kwargs):
         from app.models import CombatEvent, Ability
@@ -81,6 +84,7 @@ class FightModelView(AppModelView):
     """Actor admin model view"""
     # Disable model creation
     can_create = False
+    can_edit = False
     column_filters = ('start_at', 'finish_at')
     column_list = ('start_at', 'finish_at',)
 
