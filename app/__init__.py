@@ -1,3 +1,12 @@
+"""
+    colloid project
+    ~~~~~~~~~~~~~~
+
+    Combat log analizer.
+
+    :copyright: (c) 2013 by Darek <netmik12 [AT] gmail [DOT] com>
+    :license: BSD, see LICENSE for more details
+"""
 import os
 import json
 import sys
@@ -15,10 +24,7 @@ app = Flask(__name__)
 app.config.from_object('configs')
 
 if not app.debug and not app.testing:
-    FORMAT = '%(asctime)-15s %(clientip)s %(user)-8s %(message)s'
-    logging.basicConfig(filename='app.log', format=FORMAT)
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.CRITICAL)
+    app.logger.setLevel(logging.INFO)
 
 db = SQLAlchemy(app)
 api = Api(app)

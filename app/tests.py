@@ -1,3 +1,12 @@
+"""
+    colloid project
+    ~~~~~~~~~~~~~~
+
+    Combat log analizer.
+
+    :copyright: (c) 2013 by Darek <netmik12 [AT] gmail [DOT] com>
+    :license: BSD, see LICENSE for more details
+"""
 import unittest
 import os
 import tempfile
@@ -91,10 +100,10 @@ class RecountTestCase(DbTestCase):
 
         self.assertEqual(2, len(Fight.query.all()))
         fights = Fight.query.all()
-        self.assertEqual(10, len(fights[0].combat_events))
+        self.assertEqual(14, len(fights[0].combat_events))
         self.assertEqual(fights[0].start_at.second, 45)
         self.assertEqual(fights[0].finish_at.second, 49)
-        self.assertEqual(2, len(fights[1].combat_events))
+        self.assertEqual(4, len(fights[1].combat_events))
         self.assertEqual(fights[1].start_at.second, 49)
         self.assertEqual(fights[1].finish_at.second, 54)
 

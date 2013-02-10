@@ -1,8 +1,19 @@
+"""
+    colloid project
+    ~~~~~~~~~~~~~~
+
+    Combat log analizer.
+
+    :copyright: (c) 2013 by Darek <netmik12 [AT] gmail [DOT] com>
+    :license: BSD, see LICENSE for more details
+"""
 import os
 import re
 import weakref
 from datetime import datetime, time
 import math
+import glob
+from sqlalchemy.orm.exc import DetachedInstanceError
 
 from app import models
 from app import app
@@ -94,6 +105,11 @@ class Recount(object):
 
         return self.get_damage_done(), self.get_heal_done()
 
+    @classmethod
+    def refresh(cls):
+        cls._instance = None
+        cls._data = weakref.WeakValueDictionary()
+
 
 def get_or_create(model, **kwargs):
 
@@ -117,13 +133,14 @@ class ParseLogError(InvalidDataError):
 
 class CombatParser(object):
 
+    date = None
     UNDEFINED = 'undefinded'
 
     ability_pattern = r"(?P<name>[a-zA-Z\s^/{^/}]{0,}) {(?P<swotr_id>[\d+]{1,})}"
     efect_pattern = r"(?P<action>[a-zA-Z'\s^/{^/}]{0,}) {(?P<action_swotr_id>[\d+]{1,})}: (?P<name>[a-zA-Z'\s^/{^/}/(/)]{0,}) {(?P<name_swotr_id>[\d+]{1,})}"
-    actor_pattern = r'(?P<name>[@|\w+|\s]{1,})'
+    actor_pattern = r'(?P<name>[@|\w+|\s|/:]{1,})'
 
-    def actor(self, logdata):
+    def actor(self, logdata=None):
         """Match actor in logdata"""
         if not logdata:
             name = self.UNDEFINED
@@ -139,59 +156,74 @@ class CombatParser(object):
 
         return actor
 
-    def ability(self, logdata):
+    def ability(self, logdata=None):
         """Match ability in logdata"""
         try:
             match = re.match(self.ability_pattern, logdata)
             group = match.groupdict()
-            ability = models.Ability.query.filter_by(swotr_id=group['swotr_id']).first()
-            if not ability:
-                ability = models.Ability(name=group['name'],
-                                         swotr_id=group['swotr_id']).save()
+            ability = get_or_create(models.Ability, name=group['name'], swotr_id=group['swotr_id'])
 
             return ability
-        except AttributeError, err:
-            if re.match(r'\w+', logdata):
-                ability = models.Ability.query.filter_by(swotr_id=logdata.lower()).first()
-                if not ability:
-                    ability = models.Ability(name=logdata,
-                                             swotr_id=logdata.lower()).save()
-                return ability
-
-            raise InvalidDataError(logdata, 'ability not match',
-                                   self.ability_pattern, err)
+        except AttributeError:
+            app.logger.debug('ability not match logdata[%s]: pattern[%s]', logdata, self.ability_pattern)
+        ability = get_or_create(models.Ability, name='undefined')
+        return ability
 
     def created_at(self, logdata):
+        created_date = datetime.today()
+        if self.date:
+            created_date = self.date
         today = datetime.today()
         log_time = datetime.strptime(logdata, "%H:%M:%S.%f")
 
-        return datetime.combine(today, time(log_time.hour, log_time.minute,
+        return datetime.combine(created_date, time(log_time.hour, log_time.minute,
                                             log_time.second,
                                             log_time.microsecond))
 
-    def run(self, file_name):
+    def run(self, file_name=None, directory=None):
         """
         Open log file
         Start parse combat log
         :param file_name: - combat log filename
+        :param directory: combat log directory path
         """
+        if not file_name and not directory:
+            directory = 'app/combat'
         try:
-            file_log = open(os.path.realpath(file_name), 'r')
+            if file_name:
+                self.date = self.created_date(filename=file_name)
+                file_log = open(os.path.realpath(file_name), 'r')
+                for line in file_log.readlines():
+                    try:
+                        self.parse(line)
+                    except Exception, err:
+                        app.logger.warn(err)
+                return
+
+            path = os.path.realpath(directory)
+            files = glob.glob(path + '/combat_*.txt')
+            if not len(files):
+                app.logger.warn("No combats were found in path %s", path)
+            for file_path in files:
+                self.date = self.created_date(filename=file_path)
+                for line in open(file_path).readlines():
+                    try:
+                        self.parse(line)
+                    except Exception, err:
+                        app.logger.warn(err)
+
         except IOError, err:
             print err
             return
 
-        for line in file_log.readlines():
-            try:
-                self.parse(line)
-            except Exception, err:
-                raise err
+    def created_date(self, filename):
+        time = os.path.getctime(filename)
+        return datetime.fromtimestamp(time)
 
     def effect(self, logdata):
         try:
             match = re.match(self.efect_pattern, logdata)
             group = match.groupdict()
-
             effect = get_or_create(models.Effect, name=group['name'],
                                    swotr_id=group['name_swotr_id'])
             effect_action = get_or_create(models.EffectAction,
@@ -206,15 +238,23 @@ class CombatParser(object):
     def event_stat(self, line):
 
         try:
-            stats = re.compile(r'(\(\d+.*\)) (\<\d+.*\>)').findall(line)[0]
+            compiled = re.compile(r'(\(\d+.*\)) (\<\d+.*\>)').findall(line)
+            try:
+                stats = compiled[0]
+            except IndexError:
+                stats = re.compile(r'(\(\d+.*\))').findall(line)
+
             stat = stats[0][1:-1].split(' ')
             stat_value = stat[0]
-            threat = stats[1][1:-1]
+            try:
+                threat = stats[1][1:-1]
+            except IndexError:
+                threat = None
 
             try:
                 stat_type = get_or_create(models.StatType, name=stat[1],
                                           swotr_id=stat[2][1:-1])
-            except Exception:
+            except IndexError:
                 stat_type = None
             is_crit = False
             if '*' in stat_value:
@@ -232,19 +272,24 @@ class CombatParser(object):
         try:
             self.recount(line)
         except InvalidDataError, err:
-            from app import app
-            app.logger.error(err)
+            raise ParseLogError(err, line)
+        except DetachedInstanceError, err:
+            app.logger.warn(err)
+            Recount.refresh()
 
     def recount(self, line):
 #        data = re.findall(r'[\[<\(]([^\[<\(\]>\)]*)[\]>\)]', line)
         data = re.findall(r'[\[<]([^\[<\]>]*)[\]>\)]', line)
         event = None
-        actor = self.actor(data[1])
-        if not data[2]:
-            target = actor
-        else:
+        try:
+            actor = self.actor(data[1])
+        except IndexError:
+            actor = self.actor()
+        try:
             target = self.actor(data[2])
-        if data[3]:
+        except IndexError:
+            target = actor
+        try:
             event = models.CombatEvent(actor=actor, target=target,
                                        ability=self.ability(data[3]),
                                        created_at=self.created_at(data[0]),
@@ -253,26 +298,34 @@ class CombatParser(object):
                                        stat=self.event_stat(line))
 
             models.Fight._combat_fight().combat_events.append(event)
-#            event.save()
+        except IndexError:
+            pass
+        try:
+            effect_name = self.effect(data[4])[1].name
+        except IndexError:
+            effect_name = 'undefined'
 
-        if 'EnterCombat' in self.effect(data[4])[1].name:
+        if 'EnterCombat' in effect_name:
             models.Fight.reset()
             models.Fight._combat_fight().start_at = self.created_at(data[0])
-#            app.logger.info('Enter combat: %s', self.created_at(data[0]))
+            app.logger.info('Enter combat: %s', self.created_at(data[0]))
             Recount().reset()
             Recount().counter_start = models.Fight._combat_fight().start_at
+            models.Fight._combat_fight().combat_events.append(event)
 
         if event and event.stat:
             if event.is_damage():
                 Recount().add_damage(event.actor.name, event.stat.stat_value)
+                app.logger.debug('Damage: %s:%s %s', event.actor.name, event.ability.name, event.stat.stat_value)
             if event.is_heal():
                 Recount().add_heal(event.actor.name, event.stat.stat_value)
+                app.logger.debug('Heal: %s:%s %s', event.actor.name, event.ability.name, event.stat.stat_value)
 
-        if 'ExitCombat' in self.effect(data[4])[1].name:
+        if 'ExitCombat' in effect_name:
             models.Fight._combat_fight().finish_at = self.created_at(data[0])
             fight = models.Fight._combat_fight().save()
-#            app.logger.info('Exit combat: %s', fight.finish_at)
-#            self.info(fight)
+            app.logger.info('Exit combat: %s', fight.finish_at)
+            self.info(fight)
             Recount().get_heal_done()
             Recount().reset()
             models.Fight.reset()
@@ -294,5 +347,4 @@ class CombatParser(object):
                             fight.start_at, fight.finish_at, elapsed_time[0],
                             elapsed_time[1], actor, sum(item['damage']),
                             sum(item['damage']) / fight_time.total_seconds(),
-                            sum(item['heal']) / fight_time.total_seconds(),
-                            sum(item['heal']))
+                            sum(item['heal']), sum(item['heal']) / fight_time.total_seconds())
