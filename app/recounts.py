@@ -156,6 +156,23 @@ class CombatParser(object):
 
         return actor
 
+
+    def target(self, logdata=None):
+        """Match actor in logdata"""
+        if not logdata:
+            name = self.UNDEFINED
+        else:
+            match = re.match(self.actor_pattern, logdata)
+            if not match:
+                raise InvalidDataError(logdata, 'invalid target', self.actor_pattern)
+            name = match.groupdict()['name']
+
+        target = get_or_create(models.Target, name=name.strip())
+        if '@' not in target.name:
+            target.is_npc = True
+
+        return target
+
     def ability(self, logdata=None):
         """Match ability in logdata"""
         try:
@@ -286,9 +303,9 @@ class CombatParser(object):
         except IndexError:
             actor = self.actor()
         try:
-            target = self.actor(data[2])
+            target = self.target(data[2])
         except IndexError:
-            target = actor
+            target = self.target()
         try:
             event = models.CombatEvent(actor=actor, target=target,
                                        ability=self.ability(data[3]),

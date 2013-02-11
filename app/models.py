@@ -28,6 +28,12 @@ class Actor(db.Model, BaseModel):
     name = db.Column(db.String(80), nullable=False)
     is_npc = db.Column(db.Boolean)
     swotr_id = db.Column(db.String(80), unique=True)
+    type = db.Column(db.String(50))
+
+    __mapper_args__ = {
+        'polymorphic_identity':'actor',
+        'polymorphic_on':type
+    }
 
     def __unicode__(self):
         return u'%s' % self.name
@@ -98,12 +104,16 @@ class EventStat(db.Model, BaseModel):
         return u'<%s:%s:%s>' % (self.__class__, self.stat_value, self.stat_type)
 
 
-class Target(db.Model, BaseModel):
+class Target(Actor):
 
     __tablename__ = 'colloid_targets'
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
+    id = db.Column(db.Integer, db.ForeignKey('colloid_actors.id'), primary_key=True)
+#    name = db.Column(db.String(80), nullable=False)
+
+    __mapper_args__ = {
+        'polymorphic_identity':'target',
+    }
 
     def __unicode__(self):
         return u'%s' % self.name
@@ -131,10 +141,10 @@ class CombatEvent(db.Model, BaseModel):
     actor = db.relationship("Actor", backref=db.backref('actor_events'),
                             primaryjoin='CombatEvent.actor_id==Actor.id',
                             uselist=False, single_parent=False)
-    target_id = db.Column(db.Integer, db.ForeignKey('colloid_actors.id'),
+    target_id = db.Column(db.Integer, db.ForeignKey('colloid_targets.id'),
                           nullable=False)
-    target = db.relationship("Actor", backref=db.backref('target_events'),
-                             primaryjoin='CombatEvent.target_id==Actor.id',
+    target = db.relationship("Target", backref=db.backref('target_events'),
+                             primaryjoin='CombatEvent.target_id==Target.id',
                              uselist=False, single_parent=False)
     ability_id = db.Column(db.Integer, db.ForeignKey('colloid_abilities.id'),
                            nullable=False)

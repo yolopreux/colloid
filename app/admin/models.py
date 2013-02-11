@@ -70,7 +70,7 @@ class CombatEventModelView(AppModelView):
     """Actor admin model view"""
     # Disable model creation
     can_create = False
-    column_filters = ('created_at', 'effect', 'ability', 'effect_action',)
+    column_filters = ('created_at', 'effect', 'ability', 'effect_action', 'actor')
 
     can_edit = False
 
